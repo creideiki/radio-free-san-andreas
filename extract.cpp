@@ -106,8 +106,9 @@ int main(int argc, char **argv)
       }
       string inbasename = infilename.substr(last_slash);
 
-      cout << "Processing file: " << infilename << endl;
-         
+      cout << "Processing file " << setw((argc - 2) / 10 + 1) << infile
+           << " of " << argc - 2 << ": " << infilename << endl;
+
       result = stat(argv[infile], &stat_buffer);
       if(result == -1)
       {
@@ -132,6 +133,7 @@ int main(int argc, char **argv)
       //bit-fiddling will work as long as an uint8_t does not have
       //more stringent alignment requirements than an uint32_t. I know
       //of no processor that does anything else.
+      cout << "   Loading..." << flush;
       uint32_t *file_image = new uint32_t[(file_length / 4) + 1];
       result = read(in_fd, file_image, file_length);
       if(result == -1)
@@ -148,6 +150,10 @@ int main(int argc, char **argv)
       }
       close(in_fd);
 
+      cout << " done." << endl;
+
+      cout << "   Decrypting..." << flush;
+
       //XOR with a constant to break Rockstar's advanced encryption.
       uint32_t magic_number[] = {0xA1C43AEA,
                                  0xF314A89A,
@@ -161,13 +167,16 @@ int main(int argc, char **argv)
          decryption_state = (decryption_state + 1) % 4;
       }
 
+      cout << " done." << endl;
+
       //Read and demux the Ogg stream.
       int num_tracks = 1;
       int num_bytes = 0;
       uint8_t *current = (uint8_t *)file_image;
+      cout << "   Splitting tracks:" << flush;
       while(current < (uint8_t *)file_image + file_length)
       {
-         cout << "   Track: " << num_tracks << endl;
+         cout << " " << num_tracks << flush;
          ogg_header h;
          read_header(current, &h);
          current += sizeof(ogg_header);
@@ -191,7 +200,7 @@ int main(int argc, char **argv)
          //Sanity check
          if(string((char *)current, 4) != "OggS")
          {
-            cerr << "This doesn't look like an Ogg Vorbis stream to me.\n"
+            cerr << "\nThis doesn't look like an Ogg Vorbis stream to me.\n"
                  << "Expected first 4 bytes to be \"0x"
                  << hex
                  << (unsigned int)'O' << (unsigned int)'g'
@@ -236,5 +245,6 @@ int main(int argc, char **argv)
          close(out_fd);
          ++num_tracks;
       }
+      cout << " done." << endl;
    }
 }
