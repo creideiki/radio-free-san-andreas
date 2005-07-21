@@ -22,7 +22,9 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+
 #include <cstdio>
+#include <cmath>
 
 #include <string.h>
 #include <sys/types.h>
@@ -106,7 +108,7 @@ int main(int argc, char **argv)
       }
       string inbasename = infilename.substr(last_slash);
 
-      cout << "Processing file " << setw((argc - 2) / 10 + 1) << infile
+      cout << "Processing file " << setw((int)ceil(log10(argc - 2))) << infile
            << " of " << argc - 2 << ": " << infilename << endl;
 
       result = stat(argv[infile], &stat_buffer);
