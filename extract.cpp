@@ -247,6 +247,7 @@ int main(int argc, char **argv)
          close(out_fd);
          ++num_tracks;
       }
+      delete[] file_image;
       cout << " done." << endl;
    }
 }
