@@ -137,19 +137,29 @@ int main(int argc, char **argv)
       //of no processor that does anything else.
       cout << "   Loading..." << flush;
       uint32_t *file_image = new uint32_t[(file_length / 4) + 1];
-      result = read(in_fd, file_image, file_length);
-      if(result == -1)
+
+      ssize_t read_size = 0;
+      while(read_size < file_length)
       {
-         cerr << "Error reading input file " << argv[infile] << ": "
-              << strerror(errno) << endl;
-         exit(2);
+         result = read(in_fd, file_image + read_size, file_length - read_size);
+         if(result == -1 && errno == EINTR)
+            continue;
+         if(result == -1)
+         {
+            cerr << "Error reading input file " << argv[infile] << ": "
+                 << strerror(errno) << endl;
+            exit(2);
+         }
+         if(result == 0)
+         {
+            cerr << "Unexpected end of input file " << argv[infile]
+                 << " after reading " << read_size
+                 << " bytes." << endl;
+            exit(2);
+         }
+         read_size += result;
       }
-      else if(result != file_length)
-      {
-         cerr << "Short read count from input file " << argv[infile] << ": "
-              << strerror(errno) << endl;
-         exit(2);
-      }
+
       close(in_fd);
 
       cout << " done." << endl;
@@ -235,6 +245,8 @@ int main(int argc, char **argv)
          while(written_size < e.size)
          {
             result = write(out_fd, current, e.size - written_size);
+            if(result == -1 && errno == EINTR)
+               continue;
             if(result == -1)
             {
                cerr << "Error writing to output file for " << argv[infile] << " track "
