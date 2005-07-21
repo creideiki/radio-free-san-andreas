@@ -202,7 +202,7 @@ int main(int argc, char **argv)
          //Sanity check
          if(string((char *)current, 4) != "OggS")
          {
-            cerr << "\nThis doesn't look like an Ogg Vorbis stream to me.\n"
+            cerr << "This doesn't look like an Ogg Vorbis stream to me.\n"
                  << "Expected first 4 bytes to be \"0x"
                  << hex
                  << (unsigned int)'O' << (unsigned int)'g'
