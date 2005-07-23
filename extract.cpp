@@ -29,6 +29,7 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
+#include <algorithm>
 
 #include <cstdio>
 #include <cmath>
@@ -82,12 +83,20 @@ void read_header(const uint8_t *source, ogg_header *dest)
    memcpy(dest, source, sizeof(ogg_header));
 }
 
-char *c_string(const string &str)
+struct Memory_File
 {
-   char *p = new char[str.length() + 1];
-   str.copy(p, string::npos);
-   p[str.length()] = '\0';
-   return p;
+   uint8_t *base;
+   size_t size;
+   size_t offset;
+};
+
+size_t vcedit_read_from_memory(void *dest, size_t chunk_size, size_t num_chunks, void *source)
+{
+   Memory_File *mem = (Memory_File *)source;
+   size_t read_size = min(num_chunks * chunk_size, mem->size - mem->offset);
+   memcpy(dest, mem->base + mem->offset, read_size);
+   mem->offset += read_size;
+   return read_size;
 }
 
 void print_usage()
@@ -302,65 +311,18 @@ int main(int argc, char **argv)
             exit(8);
          }
 
-         ostringstream outfilename;
-         outfilename << argv[argc - 2] << "/"
-                     << inbasename
-                     << "-"
-                     << setfill('0')
-                     << setw(3) << track_num
-                     << ".ogg";
-
-         int out_fd = open(outfilename.str().c_str(), O_CREAT | O_TRUNC | O_RDWR, 0644);
-         if(out_fd == -1)
-         {
-            cerr << "Error opening output file for " << argv[infile] << " track "
-                 << track_num << ": " << strerror(errno) << endl;
-            exit(4);
-         }
-
-         unsigned int written_size = 0;
-         int result;
-         while(written_size < e.size)
-         {
-            result = write(out_fd, current, e.size - written_size);
-            if(result == -1 && errno == EINTR)
-               continue;
-            if(result == -1)
-            {
-               cerr << "Error writing to output file for " << argv[infile] << " track "
-                    << track_num << ": " << strerror(errno) << endl;
-               exit(4);
-            }
-            written_size += result;
-            current += result;
-         }
-
          if(add_metadata)
          {
             vcedit_state *state = vcedit_new_state();
             vorbis_comment *vc;
 
-            //FIXME: This disk juggling is ridiculous. We should do
-            //the editing in memory. Fortunately, it doesn't look too
-            //difficult.
-            if(lseek(out_fd, SEEK_SET, 0) == -1)
-            {
-               cerr << "Error rewinding output file for " << argv[infile]
-                    << " track " << track_num << " for adding metadata: "
-                    << strerror(errno) << endl;
-               exit(32);
-            }
-
-            FILE *diskfile = fdopen(out_fd, "r+b");
-            if(!diskfile)
-            {
-               cerr << "Error reopening output file for " << argv[infile]
-                    << " track " << track_num << " for adding metadata: "
-                    << strerror(errno) << endl;
-               exit(32);
-            }
-
-            if(vcedit_open(state, diskfile) < 0)
+            Memory_File buffer;
+            buffer.base = current;
+            buffer.size = e.size;
+            buffer.offset = 0;
+            if(vcedit_open_callbacks(state, &buffer,
+                                     &vcedit_read_from_memory,
+                                     (vcedit_write_func)fwrite) < 0)
             {
                cerr << "Error initializing vorbid comment edit library while "
                     << "adding metadata for "
@@ -414,22 +376,56 @@ int main(int argc, char **argv)
 
             if(fclose(taggedfile) == -1)
             {
-               cerr << "Error closing tagged file file for " << argv[infile]
+               cerr << "Error closing output file for " << argv[infile]
                     << " track " << track_num << ": "
                     << strerror(errno) << endl;
                exit(32);
             }
 
-            if(unlink(outfilename.str().c_str()) == -1)
+            current += e.size;
+
+            vorbis_comment_clear(vc);
+            vcedit_clear(state);
+         }
+         else
+         {
+            //Not adding metadata
+            ostringstream outfilename;
+            outfilename << argv[argc - 2] << "/"
+                        << inbasename
+                        << "-"
+                        << setfill('0')
+                        << setw(3) << track_num
+                        << ".ogg";
+            
+            int out_fd = open(outfilename.str().c_str(), O_CREAT | O_TRUNC | O_RDWR, 0644);
+            if(out_fd == -1)
             {
-               cerr << "Error removing temporary file for " << argv[infile]
-                    << " track " << track_num << ": "
-                    << strerror(errno) << endl;
-               exit(32);
+               cerr << "Error opening output file for " << argv[infile] << " track "
+                    << track_num << ": " << strerror(errno) << endl;
+               exit(4);
             }
+            
+            unsigned int written_size = 0;
+            int result;
+            while(written_size < e.size)
+            {
+               result = write(out_fd, current, e.size - written_size);
+               if(result == -1 && errno == EINTR)
+                  continue;
+               if(result == -1)
+               {
+                  cerr << "Error writing to output file for " << argv[infile] << " track "
+                       << track_num << ": " << strerror(errno) << endl;
+                  exit(4);
+               }
+               written_size += result;
+               current += result;
+            }
+
+            close(out_fd);
          }
 
-         close(out_fd);
          ++track_num;
       }
 
