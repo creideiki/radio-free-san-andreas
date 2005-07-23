@@ -18,13 +18,21 @@
 // $Id$
 // $HeadURL$
 
+// Ogg Vorbis comment manipulation routines adapted from the
+// vorbiscomment program (which is GPL) in the vorbis-tools distribution.
+// (c) 2000-2002 Michael Smith <msmith@xiph.org>
+// (c) 2001 Ralph Giles <giles@ashlu.bc.ca>
+
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <stdexcept>
 
 #include <cstdio>
 #include <cmath>
+#include <cstring>
 
 #include <string.h>
 #include <sys/types.h>
@@ -32,6 +40,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+
+#include <openssl/md5.h>
+#include <ogg/ogg.h>
+#include <vorbis/codec.h>
+
+#include "config.h"
+#include "vcedit.h"
 
 using namespace std;
 
@@ -41,6 +56,8 @@ using namespace std;
  * 2   - error accessing source files
  * 4   - error writing output files
  * 8   - sanity check of file contents failed
+ * 16  - error reading metadata config file
+ * 32  - error adding metadata to output file
  */
 
 //These structs are for demuxing the Ogg streams.
@@ -59,30 +76,59 @@ struct ogg_header
 
 void read_header(const uint8_t *source, ogg_header *dest)
 {
+   //This copy might seem unnecessary, but since we don't know the
+   //alignment of the Ogg header in the data stream, we don't know if
+   //we can read it immediately.
    memcpy(dest, source, sizeof(ogg_header));
+}
+
+char *c_string(const string &str)
+{
+   char *p = new char[str.length() + 1];
+   str.copy(p, string::npos);
+   p[str.length()] = '\0';
+   return p;
 }
 
 void print_usage()
 {
    cerr << "Usage:\n"
-        << "  extract [-v] <file1> [<file2> ...] <target_dir>\n\n"
+        << "  extract <file1> [<file2> ...] <target_dir> <metadata_file>\n\n"
 
         << "Extracts Ogg Vorbis audio files from the Grand Theft Auto -\n"
         << "San Andreas data files <file1>, <file2>, ... and stores the\n"
-        << "resulting files in directory <target_dir>.\n\n" << endl;
+        << "resulting files in directory <target_dir>, adding metadata\n"
+        << "according to <metadata_file>..\n\n" << endl;
 }
 
 int main(int argc, char **argv)
 {
-   if(argc < 3)
+   if(argc < 4)
    {
       print_usage();
       exit(128);
    }
 
+   ifstream metadata_file(argv[argc - 1], ios::in | ios::binary);
+   if(!metadata_file)
+   {
+      cerr << "Error reading metadata file." << endl;
+      exit(16);
+   }
+   try
+   {
+      metadata_file >> conf;
+   }
+   catch(const runtime_error &e)
+   {
+      cerr << "Error reading metadata file: " << e.what() << endl;
+      exit(16);
+   }
+   metadata_file.close();
+
    struct stat stat_buffer;
    int result;
-   result = stat(argv[argc - 1], &stat_buffer);
+   result = stat(argv[argc - 2], &stat_buffer);
    if(result == -1)
    {
       cerr << "Error accessing target directory: " << strerror(errno) << endl;
@@ -94,7 +140,7 @@ int main(int argc, char **argv)
       exit(1);
    }
 
-   for(int infile = 1; infile < argc - 1; ++infile)
+   for(int infile = 1; infile < argc - 2; ++infile)
    {
       string infilename = argv[infile];
       string::size_type last_slash = infilename.rfind('/');
@@ -108,8 +154,8 @@ int main(int argc, char **argv)
       }
       string inbasename = infilename.substr(last_slash);
 
-      cout << "Processing file " << setw((int)ceil(log10(argc - 2))) << infile
-           << " of " << argc - 2 << ": " << infilename << endl;
+      cout << "Processing file " << setw((int)ceil(log10(argc - 3))) << infile
+           << " of " << argc - 3 << ": " << infilename << endl;
 
       result = stat(argv[infile], &stat_buffer);
       if(result == -1)
@@ -173,7 +219,7 @@ int main(int argc, char **argv)
                                  0xF1FFE89D};
 
       int decryption_state = 0;
-      for(uint32_t i = 0; i < (file_length / 4) + 1; ++i)
+      for(int i = 0; i < (file_length / 4) + 1; ++i)
       {
          file_image[i] ^= magic_number[decryption_state];
          decryption_state = (decryption_state + 1) % 4;
@@ -181,14 +227,46 @@ int main(int argc, char **argv)
 
       cout << " done." << endl;
 
+      //Fingerprint this file to find the metadata to use
+      const unsigned char *md5 = MD5((uint8_t *)file_image, file_length, NULL);
+      ostringstream md5hex;
+      md5hex << hex << setfill('0');
+      for(int i = 0; i < 16; ++i)
+         md5hex << setw(2) << (uint32_t)md5[i];
+      string md5string = md5hex.str();
+
+      bool add_metadata = true;
+
+      string station = conf.lookup(md5string + ".station", "");
+      if(station == "")
+      {
+         cerr << "   Didn't recognize MD5 hash \"" << md5string
+              << "\" for file " << argv[infile]
+              << " - not adding metadata." << endl;
+         add_metadata = false;
+      }
+      else
+      {
+         cout << "   Adding metadata for station " << station << "." << endl;
+
+         if(mkdir((string(argv[argc - 2]) + "/" + station).c_str(), 0755) == -1)
+         {
+            cerr << "Error creating directory for station " << station
+                 << ": " << strerror(errno) << endl;
+            exit(32);
+         }
+      }
+      string albumprefix = conf.lookup("global.albumprefix", "");
+      if(albumprefix != "")
+         albumprefix += " ";
+
       //Read and demux the Ogg stream.
-      int num_tracks = 1;
-      int num_bytes = 0;
+      int track_num = 1;
       uint8_t *current = (uint8_t *)file_image;
       cout << "   Splitting tracks:" << flush;
       while(current < (uint8_t *)file_image + file_length)
       {
-         cout << " " << num_tracks << flush;
+         cout << " " << track_num << flush;
          ogg_header h;
          read_header(current, &h);
          current += sizeof(ogg_header);
@@ -225,22 +303,22 @@ int main(int argc, char **argv)
          }
 
          ostringstream outfilename;
-         outfilename << argv[argc - 1] << "/"
+         outfilename << argv[argc - 2] << "/"
                      << inbasename
                      << "-"
                      << setfill('0')
-                     << setw(3) << num_tracks
+                     << setw(3) << track_num
                      << ".ogg";
 
-         int out_fd = creat(outfilename.str().c_str(), 0644);
+         int out_fd = open(outfilename.str().c_str(), O_CREAT | O_TRUNC | O_RDWR, 0644);
          if(out_fd == -1)
          {
             cerr << "Error opening output file for " << argv[infile] << " track "
-                 << num_tracks << ": " << strerror(errno) << endl;
+                 << track_num << ": " << strerror(errno) << endl;
             exit(4);
          }
 
-         int written_size = 0;
+         unsigned int written_size = 0;
          int result;
          while(written_size < e.size)
          {
@@ -250,15 +328,111 @@ int main(int argc, char **argv)
             if(result == -1)
             {
                cerr << "Error writing to output file for " << argv[infile] << " track "
-                    << num_tracks << ": " << strerror(errno) << endl;
+                    << track_num << ": " << strerror(errno) << endl;
                exit(4);
             }
             written_size += result;
             current += result;
          }
+
+         if(add_metadata)
+         {
+            vcedit_state *state = vcedit_new_state();
+            vorbis_comment *vc;
+
+            //FIXME: This disk juggling is ridiculous. We should do
+            //the editing in memory. Fortunately, it doesn't look too
+            //difficult.
+            if(lseek(out_fd, SEEK_SET, 0) == -1)
+            {
+               cerr << "Error rewinding output file for " << argv[infile]
+                    << " track " << track_num << " for adding metadata: "
+                    << strerror(errno) << endl;
+               exit(32);
+            }
+
+            FILE *diskfile = fdopen(out_fd, "r+b");
+            if(!diskfile)
+            {
+               cerr << "Error reopening output file for " << argv[infile]
+                    << " track " << track_num << " for adding metadata: "
+                    << strerror(errno) << endl;
+               exit(32);
+            }
+
+            if(vcedit_open(state, diskfile) < 0)
+            {
+               cerr << "Error initializing vorbid comment edit library while "
+                    << "adding metadata for "
+                    << argv[infile] << " track " << track_num << ": "
+                    << vcedit_error(state) << endl;
+               exit(32);
+            }
+
+            vc = vcedit_comments(state);
+            vorbis_comment_clear(vc);
+            vorbis_comment_init(vc);
+
+            vorbis_comment_add_tag(vc, "ALBUM",
+                                   const_cast<char *>((albumprefix + station).c_str()));
+
+            ostringstream track_number;
+            track_number << track_num;
+            vorbis_comment_add_tag(vc, "TRACKNUMBER",
+                                   const_cast<char *>(track_number.str().c_str()));
+
+            ostringstream default_title;
+            default_title << "Track " << track_num;
+            string title = conf.lookup(md5string + ".track" + track_number.str() + ".title",
+                                       default_title.str());
+            vorbis_comment_add_tag(vc, "TITLE",
+                                   const_cast<char *>(title.c_str()));
+
+            string artist = conf.lookup(md5string + ".track" + track_number.str() + ".artist",
+                                        "Rockstar North");
+            vorbis_comment_add_tag(vc, "ARTIST",
+                                   const_cast<char *>(artist.c_str()));
+
+            FILE *taggedfile = fopen((string(argv[argc - 2]) + "/" +
+                                      station + "/" + title + ".ogg").c_str(),
+                                     "wb");
+            if(!taggedfile)
+            {
+               cerr << "Error creating tagged file for " << argv[infile]
+                    << " track " << track_num << ": "
+                    << strerror(errno) << endl;
+               exit(32);
+            }
+
+            if(vcedit_write(state, taggedfile) < 0)
+            {
+               cerr << "Error writing tagged file for " << argv[infile]
+                    << " track " << track_num << ": "
+                    << vcedit_error(state) << endl;
+               exit(32);
+            }
+
+            if(fclose(taggedfile) == -1)
+            {
+               cerr << "Error closing tagged file file for " << argv[infile]
+                    << " track " << track_num << ": "
+                    << strerror(errno) << endl;
+               exit(32);
+            }
+
+            if(unlink(outfilename.str().c_str()) == -1)
+            {
+               cerr << "Error removing temporary file for " << argv[infile]
+                    << " track " << track_num << ": "
+                    << strerror(errno) << endl;
+               exit(32);
+            }
+         }
+
          close(out_fd);
-         ++num_tracks;
+         ++track_num;
       }
+
       delete[] file_image;
       cout << " done." << endl;
    }
