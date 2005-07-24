@@ -344,7 +344,7 @@ int main(int argc, char **argv)
                                    const_cast<char *>(track_number.str().c_str()));
 
             ostringstream default_title;
-            default_title << "Track " << track_num;
+            default_title << "Track " << setw(3) << setfill('0') << track_num;
             string title = conf.lookup(md5string + ".track" + track_number.str() + ".title",
                                        default_title.str());
             vorbis_comment_add_tag(vc, "TITLE",
