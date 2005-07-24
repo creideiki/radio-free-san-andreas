@@ -1,0 +1,77 @@
+Radio Free San Andreas
+
+
+What does it do?
+================
+
+Radio Free San Andreas extracts all audio from a PC DVD of Grand Theft
+Auto: San Andreas. This includes all music, DJ chatter, ads,
+background sounds and cutscenes.
+
+
+What do I need?
+===============
+
+* A GTA: San Andreas DVD, naturally. Only tested with the PC version,
+  but PS2 or XBox might work. I have no idea.
+* A shell that does POSIX *-expansion, if you don't want to spend an
+  hour typing filenames.
+* OpenSSL and libvorbis.
+* 1,2GB free hard drive space and ~150MB free physical RAM.
+* A little-endian, at least 32-bit CPU.
+* A C and a C++ compiler.
+
+
+How do I use it?
+================
+
+First, compile it. You need GCC, libvorbis and OpenSSL. Just running
+"make" should be enough.
+
+Then, use it. If you just want to dump everything, try something like:
+
+  mkdir ~/GTA-SA
+  mount /mnt/dvd
+  ./extract /mnt/dvd/audio/streams/* ~/GTA-SA/ ./metadata.conf
+
+The first arguments are the files to extract from. Then comes the base
+directory to put the output files in, and lastly the file to read
+metadata from. (getopt(3)? Wazzat?)
+
+
+Why would I want it?
+====================
+
+Because you don't want to pay extra for the soudtrack CD:s when you
+already have the game DVD. Because San Andreas Radio [1] is way too
+specialized to work for you. Because GTA SA Music Extractor [2]
+doesn't extract anything but the music. Because neither of those tools
+are free (as in speech, not as in beer). Because you want a tool that
+you can modify until it does exactly what you want.
+
+[1] http://www.tinyted.net/eddie/SanAndreasRadio/
+[2] http://gta.ag.ru/archive/h335/
+
+
+Who's to blame?
+===============
+
+Simon Elén reverse engineered the encryption.
+Karl-Johan Karlsson wrote the code.
+The metadata is mostly taken from San Andreas Radio [1].
+
+[1] http://www.tinyted.net/eddie/SanAndreasRadio/
+
+
+Where do I get it?
+==================
+
+The official distribution page is at
+http://www.lysator.liu.se/~creideiki/radio-free-san-andreas/
+
+
+You suck. I can do this much better.
+====================================
+
+Patches are welcome at
+<san-andreas@creideiki.user.lysator.liu.se>.
