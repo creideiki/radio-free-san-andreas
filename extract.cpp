@@ -183,6 +183,11 @@ int main(int argc, char **argv)
          exit(2);
       }
 
+      //Advise the kernel not to cache this data, since we will only
+      //read it once. Since this is only a hint, we don't care if it
+      //succeeds or not.
+      posix_fadvise(in_fd, 0, 0, POSIX_FADV_NOREUSE);
+
       //Read the entire file into memory. The largest file is only
       //128MB, which should fit in memory without problems on a
       //machine that can run GTA:SA. Note that the buffer is aligned
