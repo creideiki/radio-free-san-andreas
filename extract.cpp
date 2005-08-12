@@ -1,4 +1,4 @@
-// San Andreas Audio Extractor - Extracts radio tracks from Grand Theft Auto - San Andreas.
+// Radio Free San Andreas - Extracts radio tracks from Grand Theft Auto - San Andreas.
 // Copyright (C) 2005 Karl-Johan Karlsson <san-andreas@creideiki.user.lysator.liu.se>
 
 // This program is free software; you can redistribute it and/or modify
@@ -60,6 +60,7 @@ using namespace std;
  * 8   - sanity check of file contents failed
  * 16  - error reading metadata config file
  * 32  - error adding metadata to output file
+ * 64  - refusing to run on big-endian processor
  */
 
 //These structs are for demuxing the Ogg streams.
@@ -118,6 +119,24 @@ int main(int argc, char **argv)
       print_usage();
       exit(128);
    }
+
+   union
+   {
+      uint16_t two_bytes;
+      uint8_t  one_byte[2];
+   } endian_test;
+
+   endian_test.two_bytes = 0x0102;
+   if(endian_test.one_byte[0] != 2 ||
+      endian_test.one_byte[1] != 1)
+   {
+      cerr << "You seem to be using a big-endian processor. The data files are stored\n"
+           << "in little-endian format, and Radio Free San Andreas does not (yet) have\n"
+           << "the ability to byte-swap all data before and after processing. Patches\n"
+           << "to detect and fix this at runtime are happily accepted." << endl;
+      exit(64);
+   }
+      
 
    ifstream metadata_file(argv[argc - 1], ios::in | ios::binary);
    if(!metadata_file)
