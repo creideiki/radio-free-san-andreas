@@ -14,8 +14,6 @@ What do I need?
 
 * A GTA: San Andreas DVD, naturally. Only tested with the PC version,
   but PS2 or XBox might work. I have no idea.
-* A shell that does POSIX *-expansion, if you don't want to spend an
-  hour typing filenames.
 * OpenSSL and libvorbis.
 * 1,2GB free hard drive space and ~150MB free physical RAM.
 * A little-endian, at least 32-bit CPU.
@@ -38,6 +36,24 @@ The first arguments are the files to extract from. Then comes the base
 directory to put the output files in, and lastly the file to read
 metadata from. (getopt(3)? Wazzat?)
 
+Here's the list of files on the PC DVD and the radio station in each:
+
+  audio/streams/aa        Police
+  audio/streams/adverts   Adverts
+  audio/streams/ambience  Ambience
+  audio/streams/beats     Beats
+  audio/streams/ch        Playback FM
+  audio/streams/co        KROSE
+  audio/streams/cr        K-DST
+  audio/streams/cutscene  Cutscene
+  audio/streams/ds        Bounce FM
+  audio/streams/hc        SFUR
+  audio/streams/mh        Radio Los Santos
+  audio/streams/mr        Radio X
+  audio/streams/nj        CSR
+  audio/streams/re        K-JAH
+  audio/streams/rg        Master Sounds
+  audio/streams/tk        WCTR
 
 Why would I want it?
 ====================
