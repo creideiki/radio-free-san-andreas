@@ -80,6 +80,13 @@ The metadata is mostly taken from San Andreas Radio [1].
 [1] http://www.tinyted.net/eddie/SanAndreasRadio/
 
 
+Can I change the tagging format?
+================================
+
+Sure. The file metadata.conf contains artist and title information for
+all the tracks in the game. Just change it with a text editor.
+
+
 Where do I get it?
 ==================
 
