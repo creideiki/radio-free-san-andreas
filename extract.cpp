@@ -35,6 +35,7 @@
 #include <cmath>
 #include <cstring>
 
+#include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -163,7 +164,7 @@ int main(int argc, char **argv)
       }
       string inbasename = infilename.substr(last_slash);
 
-      cout << "Processing file " << setw((int)ceil(log10(argc - 3))) << infile
+      cout << "Processing file " << setw((int)ceil(log10((float)(argc - 3)))) << infile
            << " of " << argc - 3 << ": " << infilename << endl;
 
       result = stat(argv[infile], &stat_buffer);
