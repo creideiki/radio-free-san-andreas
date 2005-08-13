@@ -12,8 +12,8 @@ background sounds and cutscenes.
 What do I need?
 ===============
 
-* A GTA: San Andreas DVD, naturally. Only tested with the PC version,
-  but PS2 or XBox might work. I have no idea.
+* A GTA: San Andreas DVD, naturally. Developed for the PC version, PS2
+  does not work, and XBox is untested.
 * OpenSSL and libvorbis.
 * 1,2GB free hard drive space and ~150MB free physical RAM.
 * A little-endian, at least 32-bit CPU.
