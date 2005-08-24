@@ -15,7 +15,7 @@ OBJECTS=$(CXXOBJECTS) $(COBJECTS)
 LIBS=-lm -lcrypto -lvorbis
 
 extract: $(OBJECTS)
-	g++ -o extract $(LIBS) $(OBJECTS)
+	g++ -o extract $(OBJECTS) $(LIBS)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
