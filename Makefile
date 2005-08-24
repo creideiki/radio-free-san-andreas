@@ -12,7 +12,7 @@ CXXOBJECTS=$(CXXSRC:%.cpp=%.o)
 COBJECTS=$(CSRC:%.c=%.o)
 OBJECTS=$(CXXOBJECTS) $(COBJECTS)
 
-LIBS=-lm -lssl -lvorbis
+LIBS=-lm -lcrypto -lvorbis
 
 extract: $(OBJECTS)
 	g++ -o extract $(LIBS) $(OBJECTS)
