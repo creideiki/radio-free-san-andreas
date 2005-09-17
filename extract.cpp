@@ -109,7 +109,7 @@ void print_usage()
         << "Extracts Ogg Vorbis audio files from the Grand Theft Auto -\n"
         << "San Andreas data files <file1>, <file2>, ... and stores the\n"
         << "resulting files in directory <target_dir>, adding metadata\n"
-        << "according to <metadata_file>..\n\n" << endl;
+        << "according to <metadata_file>.\n\n" << endl;
 }
 
 int main(int argc, char **argv)
