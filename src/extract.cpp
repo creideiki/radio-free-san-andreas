@@ -50,6 +50,8 @@
 #include "config.h"
 #include "vcedit.h"
 
+#include "autoconf.h"
+
 using namespace std;
 
 /* Exit codes:
@@ -203,10 +205,12 @@ int main(int argc, char **argv)
          exit(2);
       }
 
+#ifdef HAVE_POSIX_FADVISE
       //Advise the kernel not to cache this data, since we will only
       //read it once. Since this is only a hint, we don't care if it
       //succeeds or not.
       posix_fadvise(in_fd, 0, 0, POSIX_FADV_NOREUSE);
+#endif
 
       //Read the entire file into memory. The largest file is only
       //128MB, which should fit in memory without problems on a

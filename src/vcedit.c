@@ -19,7 +19,6 @@
 #include "vcedit.h"
 #include "i18n.h"
 
-
 #define CHUNKSIZE 4096
 
 vcedit_state *vcedit_new_state(void)
