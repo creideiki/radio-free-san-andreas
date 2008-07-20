@@ -23,14 +23,15 @@ What do I need?
 How do I use it?
 ================
 
-First, compile it. You need GCC, libvorbis and OpenSSL. Just running
-"make" should be enough.
+First, compile it. You need GCC, libvorbis and OpenSSL. Run:
+
+  ./configure && make
 
 Then, use it. If you just want to dump everything, try something like:
 
   mkdir ~/GTA-SA
   mount /mnt/dvd
-  ./extract /mnt/dvd/audio/streams/* ~/GTA-SA/ ./metadata.conf
+  src/extract /mnt/dvd/audio/streams/* ~/GTA-SA/ ./metadata.conf
 
 The first arguments are the files to extract from. Then comes the base
 directory to put the output files in, and lastly the file to read
