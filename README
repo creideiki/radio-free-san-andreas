@@ -37,6 +37,17 @@ The first arguments are the files to extract from. Then comes the base
 directory to put the output files in, and lastly the file to read
 metadata from. (getopt(3)? Wazzat?)
 
+The files are extracted as they are stored, to allow you maximum
+flexibility in processing them. However, this means that you cannot
+listen to the songs immediately, since each song is cut up into three
+pieces (intro, main, and outro) with several alternatives for intro
+and outro with or without DJ chatter over the music. To assemble all
+songs without DJ chatter, run the provided shell script
+assemble-songs.sh, giving it the directory you put all the output
+files in as an argument:
+
+  ./assemble-songs.sh ~/GTA-SA/
+
 Here's the list of files on the PC DVD and the radio station in each:
 
   audio/streams/aa        Police
