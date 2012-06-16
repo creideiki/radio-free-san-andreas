@@ -22,7 +22,8 @@ AC_REQUIRE_CPP
 # Checks for libraries.
 AC_CHECK_LIB([m], [ceil],, AC_MSG_ERROR([[*** libm was not found]]))
 AC_CHECK_LIB([crypto], [MD5],, AC_MSG_ERROR([[*** libcrypto was not found]]))
-AC_CHECK_LIB([vorbis], [ogg_sync_buffer],, AC_MSG_ERROR([[*** libvorbis was not found]]))
+AC_CHECK_LIB([ogg], [ogg_sync_buffer],, AC_MSG_ERROR([[*** libogg was not found]]))
+AC_CHECK_LIB([vorbis], [vorbis_comment_init],, AC_MSG_ERROR([[*** libvorbis was not found]]))
 
 # Checks for header files.
 AC_HEADER_STDC
