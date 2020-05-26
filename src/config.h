@@ -68,7 +68,7 @@ public:
     * \param def The default value. Returned if the key was not found.
     * \return The key's value or the default value.
     */
-   std::string lookup(const std::string &key, const std::string &def) const;
+   std::string lookup(const std::string &ns, const std::string &key, const std::string &def) const;
 
 private:
 
