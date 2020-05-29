@@ -50,15 +50,18 @@ do
     pushd "$station" > /dev/null
     for file in *.ogg
     do
-        base="`basename "$file" .ogg`"
-        if [ -f "$base (Intro).ogg" -a -f "$base (Outro).ogg" ]
+        inner="${file%.ogg}"
+        base="${inner#[0-9][0-9][0-9] - }"
+        intro=$(echo [0-9][0-9][0-9]" - $base (Intro).ogg")
+        outro=$(echo [0-9][0-9][0-9]" - $base (Outro).ogg")
+        if [ "${intro:0:5}" != "[0-9]" -a "${outro:0:5}" != "[0-9]" ]
         then
             echo "Assembling song $base"
-            cat "$base (Intro).ogg" "$base.ogg" "$base (Outro).ogg" > "$base (Complete).ogg"
+            cat "$outro" "$file" "$outro" > "$inner (Complete).ogg"
             if [ $DELETE -eq 1 ]
             then
                 echo "Deleting leftover parts of song $base"
-                rm -f "$base"\ \(Intro*\).ogg "$base.ogg" "$base"\ \(Outro*\).ogg
+                rm -f "$file" [0-9][0-9][0-9]" - $base ("{In,Ou}tro*").ogg"
             fi
         fi
     done

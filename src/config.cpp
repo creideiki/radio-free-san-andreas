@@ -70,6 +70,15 @@ istream &operator>>(istream &is, config &conf)
                   section.erase(section.find_last_not_of(" \t") + 1);
                }
             }
+            // look for an alias assignment
+            line.erase(0, idx + 1);
+            line.erase(0, line.find_first_not_of(" \t"));
+            if(line[0] == '=') {
+               line.erase(0, 1);
+               line.erase(0, line.find_first_not_of(" \t"));
+               string parent = line.substr(line.find('['), line.find(']'));
+               conf.settings[section + ".parent"] = parent.substr(1, -1);
+            }
          }
          break;
 
@@ -113,11 +122,18 @@ string config::operator[](const string &key) const
       return it->second;
 }
 
-string config::lookup(const string &key, const string &def) const
+string config::lookup(const string &ns, const string &key, const string &def) const
 {
    try
    {
-      return (*this)[key];
+      return (*this)[ns + "." + key];
+   }
+   catch(const directive_not_found &e)
+   {
+   }
+   try
+   {
+      return this->lookup((*this)[ns + ".parent"], key, def);
    }
    catch(const directive_not_found &e)
    {

@@ -42,6 +42,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <limits.h>
 
 #include <openssl/md5.h>
 #include <ogg/ogg.h>
@@ -275,7 +276,7 @@ int main(int argc, char **argv)
 
       bool add_metadata = true;
 
-      string station = conf.lookup(md5string + ".station", "");
+      string station = conf.lookup(md5string, "station", "");
       if(station == "")
       {
          cerr << "   Didn't recognize MD5 hash \"" << md5string
@@ -287,14 +288,14 @@ int main(int argc, char **argv)
       {
          cout << "   Adding metadata for station " << station << "." << endl;
 
-         if(mkdir((string(argv[argc - 2]) + "/" + station).c_str(), 0755) == -1)
+         if(mkdir((string(argv[argc - 2]) + "/" + station).c_str(), 0755) == -1 && errno != EEXIST)
          {
             cerr << "Error creating directory for station " << station
                  << ": " << strerror(errno) << endl;
             exit(32);
          }
       }
-      string albumprefix = conf.lookup("global.albumprefix", "");
+      string albumprefix = conf.lookup("global", "albumprefix", "");
       if(albumprefix != "")
          albumprefix += " ";
 
@@ -374,19 +375,21 @@ int main(int argc, char **argv)
 
             ostringstream default_title;
             default_title << "Track " << setw(3) << setfill('0') << track_num;
-            string title = conf.lookup(md5string + ".track" + track_number.str() + ".title",
+            string title = conf.lookup(md5string, "track" + track_number.str() + ".title",
                                        default_title.str());
             vorbis_comment_add_tag(vc, "TITLE",
                                    const_cast<char *>(title.c_str()));
 
-            string artist = conf.lookup(md5string + ".track" + track_number.str() + ".artist",
+            string artist = conf.lookup(md5string, "track" + track_number.str() + ".artist",
                                         "Rockstar North");
             vorbis_comment_add_tag(vc, "ARTIST",
                                    const_cast<char *>(artist.c_str()));
 
-            FILE *taggedfile = fopen((string(argv[argc - 2]) + "/" +
-                                      station + "/" + title + ".ogg").c_str(),
-                                     "wb");
+            ostringstream file_name;
+            file_name << argv[argc - 2] << "/" << station << "/";
+            file_name << setw(3) << setfill('0') << track_num;
+            file_name << " - " << title << ".ogg";
+            FILE *taggedfile = fopen(file_name.str().c_str(), "wb");
             if(!taggedfile)
             {
                cerr << "Error creating tagged file for " << argv[infile]
