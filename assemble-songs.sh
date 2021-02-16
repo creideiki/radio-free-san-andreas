@@ -57,7 +57,7 @@ do
         if [ "${intro:0:5}" != "[0-9]" -a "${outro:0:5}" != "[0-9]" ]
         then
             echo "Assembling song $base"
-            cat "$outro" "$file" "$outro" > "$inner (Complete).ogg"
+            cat "$intro" "$file" "$outro" > "$inner (Complete).ogg"
             if [ $DELETE -eq 1 ]
             then
                 echo "Deleting leftover parts of song $base"
